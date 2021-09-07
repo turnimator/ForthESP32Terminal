@@ -3,7 +3,6 @@ package com.turnimator.forthesp32terminal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.os.Bundle;
 
 import android.text.method.ScrollingMovementMethod;
@@ -11,19 +10,13 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ExpandableListAdapter;
-import android.widget.ExpandableListView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SeekBar;
-import android.widget.SimpleExpandableListAdapter;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
@@ -220,9 +213,35 @@ public class MainActivity extends Activity {
                 }
             });
             buttonLayout.addView(buttonList.get(bi));
-
-
+            return true;
         }
+        if (s[0].toLowerCase(Locale.ROOT).equals("\\@plot")) {
+            float x = 0;
+            float y = 0;
+            try {
+                x = Float.parseFloat(s[1]);
+                y = Float.parseFloat(s[2]);
+            } catch (Exception ex) {
+                responseView.append(ex.toString());
+                return true;
+            }
+            radarView.plotPolar(x, y);
+
+            return true;
+        }
+        if (s[0].toLowerCase(Locale.ROOT).equals("\\@rot")) {
+            double angle = 0;
+            try {
+                angle = Float.parseFloat(s[1]);
+            } catch (Exception ex) {
+                responseView.append(ex.toString());
+                return true;
+            }
+            radarView.rotate(angle);
+
+            return true;
+        }
+
         return rv;
     }
 
