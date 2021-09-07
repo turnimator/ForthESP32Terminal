@@ -48,6 +48,33 @@ public class MainActivity extends Activity {
     SeekBar seekBarSpeed;
     RadarView radarView;
 
+    void doCommand(String cmd, EditText responseView) {
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+                Log.d("Sending", cmd);
+                String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), cmd);
+                for (int i = 0; i < sa.length; i++) {
+                    if (sa[i].startsWith("@")) {
+                        Log.d("SentToParseResponse", sa[i]);
+                        parseResponse(cmd);
+                    }
+                    if (sa[i].equals("-->") || sa[i].equals("-->  ok")) {
+                        continue;
+                    }
+                    responseView.append(sa[i] + "\n");
+                    int length = responseView.getText().toString().split("\n").length;
+                    responseView.scrollTo(length, 0);
+                }
+
+            }
+        });
+        t.run();
+
+    }
+
+
     @SuppressLint("NewApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,19 +144,7 @@ public class MainActivity extends Activity {
                 }
                 responseView.append(s + "\n");
                 Log.d("Sending", s);
-                String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), s);
-                for (int i = 0; i < sa.length; i++) {
-                    if (sa[i].startsWith("@")) {
-                        parseResponse(s);
-                        continue;
-                    }
-                    if (sa[i].equals("-->") || sa[i].equals("-->  ok")) {
-                        continue;
-                    }
-                    responseView.append(sa[i] + "\n");
-                    int length = responseView.getText().toString().split("\n").length;
-                    responseView.scrollTo(length, 0);
-                }
+                doCommand(s, responseView);
                 return true;
             }
         });
@@ -178,6 +193,7 @@ public class MainActivity extends Activity {
 
     }
 
+
     boolean parseCommand(String param) {
         boolean rv = false;
         String[] s = param.split(" ");
@@ -216,16 +232,16 @@ public class MainActivity extends Activity {
             return true;
         }
         if (s[0].toLowerCase(Locale.ROOT).equals("\\@plot")) {
-            float x = 0;
-            float y = 0;
+            float deg = 0;
+            float dist = 0;
             try {
-                x = Float.parseFloat(s[1]);
-                y = Float.parseFloat(s[2]);
+                deg = Float.parseFloat(s[1]);
+                dist = Float.parseFloat(s[2]);
             } catch (Exception ex) {
                 responseView.append(ex.toString());
                 return true;
             }
-            radarView.plotPolar(x, y);
+            radarView.plotPolar(deg, dist);
 
             return true;
         }
@@ -254,6 +270,28 @@ public class MainActivity extends Activity {
             responseView.invalidate();
             return true;
         }
+
+        if (s[0].toLowerCase(Locale.ROOT).equals("@plot")) {
+            double deg = 0.0;
+            float dist = 0.0F;
+            try {
+                deg = Float.parseFloat(s[1]);
+                dist = Float.parseFloat(s[2]);
+            } catch (Exception ex) {
+                responseView.append(ex.toString());
+            }
+            Log.d("ParseResponse", "plotPolar(" + deg + ", " + dist + ")");
+            radarView.plotPolar(deg, dist);
+
+            return true;
+        }
+
+        if (s[0].toLowerCase(Locale.ROOT).equals("@rotate")) {
+            float deg = Float.parseFloat(s[1]);
+            radarView.rotate(deg);
+            return true;
+        }
+
         if (s[0].toLowerCase(Locale.ROOT).equals("@button")) {
             rv = true;
             String text = s[1];
