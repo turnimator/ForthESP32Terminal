@@ -3,6 +3,7 @@ package com.turnimator.forthesp32terminal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
 
 import android.text.method.ScrollingMovementMethod;
@@ -53,6 +54,7 @@ public class MainActivity extends Activity {
     Thread commandTask;
 
     ArrayDeque<String> responseQ = new ArrayDeque<>();
+    Thread responseTask;
 
     void getWords(CustomAutoCompleteTextView commandField) {
 
@@ -152,7 +154,7 @@ public class MainActivity extends Activity {
         commandTask = new Thread(new Runnable() {
             @Override
             public void run() {
-                for(;;) {
+                for (; ; ) {
                     if (commandQ.isEmpty()) {
                         try {
                             Thread.sleep(200);
@@ -165,26 +167,49 @@ public class MainActivity extends Activity {
                     Log.d("Sending", cmd);
                     String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), cmd);
                     for (int i = 0; i < sa.length; i++) {
-                        if (sa[i].startsWith("@")) {
-                            Log.d("SentToParseResponse", sa[i]);
-                            parseResponse(cmd);
-                        }
-                        if (sa[i].equals("-->") || sa[i].equals("-->  ok")) {
-                            continue;
-                        }
                         responseQ.addFirst(sa[i]);
                     }
                 }
             }
         });
+
         commandTask.start();
+
+        responseTask = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (; ; ) {
+                    if (responseQ.isEmpty()) {
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    String s = responseQ.removeLast();
+                    if (s.startsWith("@")) {
+                        parseResponse(s);
+                    }
+                    if (s.equals("-->") || s.equals("-->  ok")) {
+                        continue;
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            responseView.append(s + "\n");
+                        }
+                    });
+                }
+
+            }
+        });
+
+        responseTask.start();
 
         commandField.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                while (! responseQ.isEmpty()){
-                    responseView.append(responseQ.removeLast() + "\n");
-                }
                 String s = commandField.getText().toString(); //+ "\n"; // The newline is contained in the commandField! BUG BUG BUG
                 commandField.setText("");
                 if (s.startsWith("\\@")) {
@@ -194,14 +219,6 @@ public class MainActivity extends Activity {
                 responseView.append(s + "\n");
                 Log.d("Adding to commandQ", s);
                 commandQ.addFirst(s);
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                while (! responseQ.isEmpty()){
-                    responseView.append(responseQ.removeLast() + "\n");
-                }
                 return true;
             }
         });
@@ -279,7 +296,7 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        return rv;
+        return false;
     }
 
 
@@ -287,8 +304,13 @@ public class MainActivity extends Activity {
         boolean rv = false;
         String[] s = param.split(" ");
         if (param.toLowerCase(Locale.ROOT).equals("@clr")) {
-            responseView.setText("");
-            responseView.invalidate();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    responseView.setText("");
+                    responseView.invalidate();
+                }
+            });
             return true;
         }
 
@@ -299,17 +321,30 @@ public class MainActivity extends Activity {
                 deg = Float.parseFloat(s[1]);
                 dist = Float.parseFloat(s[2]);
             } catch (Exception ex) {
-                responseView.append(ex.toString());
+                Log.d("parseResponse", ex.toString());
             }
             Log.d("ParseResponse", "plotPolar(" + deg + ", " + dist + ")");
-            radarView.plotPolar(deg, dist);
+            double finalDeg = deg;
+            float finalDist = dist;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    radarView.plotPolar(finalDeg, finalDist);
+                }
+            });
 
             return true;
         }
 
         if (s[0].toLowerCase(Locale.ROOT).equals("@rotate")) {
             float deg = Float.parseFloat(s[1]);
-            radarView.rotate(deg);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    radarView.rotate(deg);
+                }
+            });
+
             return true;
         }
 
@@ -321,25 +356,32 @@ public class MainActivity extends Activity {
             for (int i = 3; i < s.length; i++) {
                 buttonCommand += " " + s[i];
             }
-
-            buttonCommandList.add(buttonCommand);
-            int bci = buttonCommandList.indexOf(buttonCommand);
-
-            Button b = new Button(this);
-            buttonList.add(b);
-            int bi = buttonList.indexOf(b);
-            buttonList.get(bi).setText(text);
-            buttonList.get(bi).setOnClickListener(new View.OnClickListener() {
+            String finalButtonCommand = buttonCommand;
+            Context o = this;
+            runOnUiThread(new Runnable() {
                 @Override
-                public void onClick(View v) {
-                    responseView.append(buttonCommandList.get(bci));
-                    String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), buttonCommandList.get(bci));
-                    for (int i = 0; i < sa.length; i++) {
-                        responseView.append(sa[i] + "\n");
-                    }
+                public void run() {
+                    buttonCommandList.add(finalButtonCommand);
+                    int bci = buttonCommandList.indexOf(finalButtonCommand);
+
+                    Button b = new Button(o);
+                    buttonList.add(b);
+                    int bi = buttonList.indexOf(b);
+                    buttonList.get(bi).setText(text);
+                    buttonList.get(bi).setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            responseView.append(buttonCommandList.get(bci));
+                            String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), buttonCommandList.get(bci));
+                            for (int i = 0; i < sa.length; i++) {
+                                responseView.append(sa[i] + "\n");
+                            }
+                        }
+                    });
+                    buttonLayout.addView(buttonList.get(bi));
+
                 }
             });
-            buttonLayout.addView(buttonList.get(bi));
 
 
         }
