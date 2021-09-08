@@ -100,6 +100,7 @@ public class RadarView extends ImageView {
             p.y = (float) (p.x * sin(angle) + p.y * cos(angle));
             s += "(" + p.x + "," + p.y + ")";
             Log.d("rotate", s);
+            invalidate();
         }
         invalidate();
     }

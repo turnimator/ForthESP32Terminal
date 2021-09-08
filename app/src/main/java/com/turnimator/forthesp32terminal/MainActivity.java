@@ -152,23 +152,31 @@ public class MainActivity extends Activity {
         this.addContentView(mainLayout, verticalParams);
 
         commandTask = new Thread(new Runnable() {
+
+            public synchronized void doCommand() {
+                if (commandQ.isEmpty()) {
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    return;
+                }
+                String cmd = commandQ.removeLast();
+                Log.d("Sending", cmd);
+                String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), cmd);
+                for (int i = 0; i < sa.length; i++) {
+                    responseQ.addFirst(sa[i]);
+                }
+                synchronized (responseTask) {
+                    responseTask.notify();
+                }
+            }
+
             @Override
             public void run() {
                 for (; ; ) {
-                    if (commandQ.isEmpty()) {
-                        try {
-                            Thread.sleep(200);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        continue;
-                    }
-                    String cmd = commandQ.removeLast();
-                    Log.d("Sending", cmd);
-                    String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), cmd);
-                    for (int i = 0; i < sa.length; i++) {
-                        responseQ.addFirst(sa[i]);
-                    }
+                    doCommand();
                 }
             }
         });
@@ -176,16 +184,15 @@ public class MainActivity extends Activity {
         commandTask.start();
 
         responseTask = new Thread(new Runnable() {
-            @Override
-            public void run() {
+            public synchronized void doResponse() {
                 for (; ; ) {
                     if (responseQ.isEmpty()) {
                         try {
-                            Thread.sleep(200);
+                            wait(1000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        continue;
+                        return;
                     }
                     String s = responseQ.removeLast();
                     if (s.startsWith("@")) {
@@ -201,7 +208,13 @@ public class MainActivity extends Activity {
                         }
                     });
                 }
+            }
 
+            @Override
+            public void run() {
+                for (; ; ) {
+                    doResponse();
+                }
             }
         });
 
