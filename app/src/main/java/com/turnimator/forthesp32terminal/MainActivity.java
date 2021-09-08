@@ -20,6 +20,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -48,32 +49,43 @@ public class MainActivity extends Activity {
     SeekBar seekBarSpeed;
     RadarView radarView;
 
-    void doCommand(String cmd, EditText responseView) {
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
+    ArrayDeque<String> commandQ = new ArrayDeque<>();
+    Thread commandTask;
 
-                Log.d("Sending", cmd);
-                String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), cmd);
-                for (int i = 0; i < sa.length; i++) {
-                    if (sa[i].startsWith("@")) {
-                        Log.d("SentToParseResponse", sa[i]);
-                        parseResponse(cmd);
-                    }
-                    if (sa[i].equals("-->") || sa[i].equals("-->  ok")) {
-                        continue;
-                    }
-                    responseView.append(sa[i] + "\n");
-                    int length = responseView.getText().toString().split("\n").length;
-                    responseView.scrollTo(length, 0);
+    ArrayDeque<String> responseQ = new ArrayDeque<>();
+
+    void getWords(CustomAutoCompleteTextView commandField) {
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, wordList);
+        wordListView.setAdapter(adapter);
+        wordListView.setFocusable(true);
+        autoFillHints = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), "words");
+        for (int i = 0; i < autoFillHints.length; i++) {
+            String[] sa = autoFillHints[i].split(" ");
+            for (int j = 0; j < sa.length; j++) {
+                if (sa[j].equals("ok")) {
+                    continue;
                 }
-
+                if (sa[j].equals("-->")) {
+                    continue;
+                }
+                adapter.add(sa[j]);
+            }
+        }
+        commandField.setAdapter(adapter);
+        commandField.setHint("1 1 + .");
+        wordListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                String s = ((TextView) view).getText().toString();
+                commandField.append(" " + s);
             }
         });
-        t.run();
+        commandField.setMinimumWidth(600);
+        commandField.setMaxWidth(600);
+        wordListView.setFocusable(true);
 
     }
-
 
     @SuppressLint("NewApi")
     @Override
@@ -131,11 +143,48 @@ public class MainActivity extends Activity {
 
         seekBarSpeed = new SeekBar(this);
 
+        LinearLayout.LayoutParams rightSideParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rightSideParams.gravity = Gravity.RIGHT;
+        wordListView.setLayoutParams(rightSideParams);
+
         this.addContentView(mainLayout, verticalParams);
+
+        commandTask = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for(;;) {
+                    if (commandQ.isEmpty()) {
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    String cmd = commandQ.removeLast();
+                    Log.d("Sending", cmd);
+                    String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), cmd);
+                    for (int i = 0; i < sa.length; i++) {
+                        if (sa[i].startsWith("@")) {
+                            Log.d("SentToParseResponse", sa[i]);
+                            parseResponse(cmd);
+                        }
+                        if (sa[i].equals("-->") || sa[i].equals("-->  ok")) {
+                            continue;
+                        }
+                        responseQ.addFirst(sa[i]);
+                    }
+                }
+            }
+        });
+        commandTask.start();
 
         commandField.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                while (! responseQ.isEmpty()){
+                    responseView.append(responseQ.removeLast() + "\n");
+                }
                 String s = commandField.getText().toString(); //+ "\n"; // The newline is contained in the commandField! BUG BUG BUG
                 commandField.setText("");
                 if (s.startsWith("\\@")) {
@@ -143,54 +192,22 @@ public class MainActivity extends Activity {
                     return true;
                 }
                 responseView.append(s + "\n");
-                Log.d("Sending", s);
-                doCommand(s, responseView);
+                Log.d("Adding to commandQ", s);
+                commandQ.addFirst(s);
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                while (! responseQ.isEmpty()){
+                    responseView.append(responseQ.removeLast() + "\n");
+                }
                 return true;
             }
         });
 
-
         responseView.setText("");
-        String portString = textPort.getText().toString();
-        int portNo = 0;
-        try {
-            portNo = Integer.parseInt(portString);
-        } catch (Exception ex) {
-            textPort.setText("###");
-        }
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.gravity = Gravity.RIGHT;
-        wordListView.setLayoutParams(params);
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, wordList);
-        wordListView.setAdapter(adapter);
-        wordListView.setFocusable(true);
-        autoFillHints = ForthCommunicationModel.send(textURI.getText().toString(), portNo, "words");
-        for (int i = 0; i < autoFillHints.length; i++) {
-            String[] sa = autoFillHints[i].split(" ");
-            for (int j = 0; j < sa.length; j++) {
-                if (sa[j].equals("ok")) {
-                    continue;
-                }
-                if (sa[j].equals("-->")) {
-                    continue;
-                }
-                adapter.add(sa[j]);
-            }
-        }
-        commandField.setAdapter(adapter);
-        commandField.setHint("1 1 + .");
-        wordListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                String s = ((TextView) view).getText().toString();
-                commandField.append(" " + s);
-            }
-        });
-        commandField.setMinimumWidth(600);
-        commandField.setMaxWidth(600);
-        wordListView.setFocusable(true);
-
+        getWords(commandField);
     }
 
 
@@ -200,6 +217,10 @@ public class MainActivity extends Activity {
         if (param.toLowerCase(Locale.ROOT).equals("\\@clr") || s[0].toLowerCase(Locale.ROOT).equals("\\@clr")) {
             responseView.setText("");
             responseView.invalidate();
+            return true;
+        }
+        if (param.toLowerCase(Locale.ROOT).equals("\\@words") || s[0].toLowerCase(Locale.ROOT).equals("\\@clr")) {
+            getWords(commandField);
             return true;
         }
         if (s[0].toLowerCase(Locale.ROOT).equals("\\@button")) {

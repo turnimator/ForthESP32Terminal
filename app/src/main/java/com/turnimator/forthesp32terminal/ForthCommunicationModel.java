@@ -127,4 +127,7 @@ public class ForthCommunicationModel {
             e.printStackTrace();
         }
     }
+    public void connect(){
+        connector.start();
+    }
 }
