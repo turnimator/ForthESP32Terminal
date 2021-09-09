@@ -12,7 +12,11 @@ import java.net.Socket;
 
 public class ForthCommunicationModel {
     Socket socket = new Socket();
-    boolean canSend = true;
+
+    enum SendFlag {Send, Receive}
+
+    SendFlag sendFlag = SendFlag.Send;
+
     PrintWriter out = null;
     BufferedReader br = null;
     String host;
@@ -58,28 +62,28 @@ public class ForthCommunicationModel {
     public synchronized void send(String text) {
         final String[] s = {""};
         Log.d("Send", text);
-        if ( ! socket.isConnected()){
+        if (!socket.isConnected()) {
             connect(host, port);
         }
-        while (!canSend) {
+        while (sendFlag != SendFlag.Send) {
             try {
                 wait();
             } catch (InterruptedException ex) {
 
             }
         }
-        canSend = false;
+        sendFlag = SendFlag.Receive;
         out.println(text);
         out.flush();
-
+        notify();
     }
 
     public synchronized String receive() {
         final String[] s = {null};
-        while(canSend){
+        while (sendFlag != SendFlag.Receive) {
             try {
                 wait();
-            } catch(InterruptedException ex){
+            } catch (InterruptedException ex) {
 
             }
         }
@@ -88,7 +92,8 @@ public class ForthCommunicationModel {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        sendFlag = SendFlag.Send;
+        notify();
         return s[0];
     }
 
