@@ -13,10 +13,6 @@ import java.net.Socket;
 public class ForthCommunicationModel {
     Socket socket = new Socket();
 
-    enum SendFlag {Send, Receive}
-
-    SendFlag sendFlag = SendFlag.Send;
-
     PrintWriter out = null;
     BufferedReader br = null;
     String host;
@@ -51,53 +47,40 @@ public class ForthCommunicationModel {
                     ir = new InputStreamReader(socket.getInputStream());
                 } catch (Exception e) {
                     Log.d("Connection inputStream", e.toString());
+                    return;
                 }
                 br = new BufferedReader(ir);
-
             }
         });
         connectThread.start();
     }
 
-    public synchronized void send(String text) {
+    public void send(String text) {
         final String[] s = {""};
         Log.d("Send", text);
-        if (!socket.isConnected()) {
-            connect(host, port);
+        if (!socket.isConnected() || out == null) {
+            return;
         }
-        while (sendFlag != SendFlag.Send) {
-            try {
-                wait();
-            } catch (InterruptedException ex) {
-
-            }
-        }
-        sendFlag = SendFlag.Receive;
         out.println(text);
         out.flush();
-        notify();
+
     }
 
-    public synchronized String receive() {
-        final String[] s = {null};
-        while (sendFlag != SendFlag.Receive) {
-            try {
-                wait();
-            } catch (InterruptedException ex) {
-
-            }
-        }
+    public String receive() {
+        String s = "";
         try {
-            s[0] = br.readLine();
+            s = br.readLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        sendFlag = SendFlag.Send;
-        notify();
-        return s[0];
+        return s;
     }
 
+
     public boolean isConnected() {
+        if (br == null){
+            return  false;
+        }
         return socket.isConnected();
     }
 

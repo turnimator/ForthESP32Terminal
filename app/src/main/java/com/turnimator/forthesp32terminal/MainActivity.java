@@ -4,6 +4,7 @@ package com.turnimator.forthesp32terminal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 
 import android.text.method.ScrollingMovementMethod;
@@ -54,7 +55,7 @@ public class MainActivity extends Activity {
     ArrayDeque<String> commandQ = new ArrayDeque<>();
     Thread commandTask;
 
-    ArrayDeque<String> responseQ = new ArrayDeque<>();
+    //  ArrayDeque<String> responseQ = new ArrayDeque<>();
     Thread responseTask;
 
     void getWords(CustomAutoCompleteTextView commandField) {
@@ -88,6 +89,10 @@ public class MainActivity extends Activity {
         commandField.setMaxWidth(600);
         wordListView.setFocusable(true);
 
+    }
+
+    void connect(){
+        forth.connect(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()));
     }
 
     @SuppressLint("NewApi")
@@ -155,20 +160,19 @@ public class MainActivity extends Activity {
         textPort.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                forth.connect(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()));
+               connect();
                 return true;
             }
         });
-        commandTask = new Thread(new Runnable() {
 
+        commandTask = new Thread(new Runnable() {
             public synchronized void doCommand() {
-                if (commandQ.isEmpty()) {
+                while (commandQ.isEmpty()) {
                     try {
-                        wait(1000);
+                        wait(1500);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    return;
                 }
                 String cmd = commandQ.removeLast();
                 Log.d("Sending", cmd);
@@ -183,13 +187,28 @@ public class MainActivity extends Activity {
             }
         });
 
+
         commandTask.start();
 
         responseTask = new Thread(new Runnable() {
-            public synchronized void doResponse() {
+
+            @Override
+            public void run() {
                 for (; ; ) {
+                    if  (! forth.isConnected()){
+                        textPort.setTextColor(Color.RED);
+                        continue;
+                    } else {
+                        textPort.setTextColor(Color.GREEN);
+                    }
+
                     String s = forth.receive();
-                    if (s == null){
+                    if (s == null) {
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                         continue;
                     }
                     if (s.startsWith("@")) {
@@ -198,19 +217,13 @@ public class MainActivity extends Activity {
                     if (s.equals("-->") || s.equals("-->  ok")) {
                         continue;
                     }
+
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             responseView.append(s + "\n");
                         }
                     });
-                }
-            }
-
-            @Override
-            public void run() {
-                for (; ; ) {
-                    doResponse();
                 }
             }
         });
@@ -228,7 +241,10 @@ public class MainActivity extends Activity {
                 }
                 responseView.append(s + "\n");
                 Log.d("Adding to commandQ", s);
-                commandQ.addFirst(s);
+                synchronized (commandTask) {
+                    commandQ.addFirst(s);
+                    commandTask.notify();
+                }
                 return true;
             }
         });
@@ -370,7 +386,6 @@ public class MainActivity extends Activity {
                 public void run() {
                     buttonCommandList.add(finalButtonCommand);
                     int bci = buttonCommandList.indexOf(finalButtonCommand);
-
                     Button b = new Button(o);
                     buttonList.add(b);
                     int bi = buttonList.indexOf(b);
@@ -379,15 +394,13 @@ public class MainActivity extends Activity {
                         @Override
                         public void onClick(View v) {
                             responseView.append(buttonCommandList.get(bci));
-                            forth.send(buttonCommandList.get(bci));
+                            commandQ.addFirst(buttonCommandList.get(bci));
                         }
                     });
                     buttonLayout.addView(buttonList.get(bi));
 
                 }
             });
-
-
         }
         return rv;
     }
