@@ -58,8 +58,11 @@ public class RadarView extends ImageView {
         canvas.drawLine(0, hMid, w, hMid, crossHairPaint);
 
         for (PointF p : pt) {
-            canvas.drawCircle(wMid + p.y, hMid - p.x, 10, pointPaint); // remember: We are plotting in the Widget, not the actual radar
-            Log.d("RadarView", "plotting: " + p.x + "," + p.y);
+            float x = (float) (p.x * cmM);
+            float y = (float) (p.y * cmM);
+
+            canvas.drawCircle(wMid + y, hMid - x, 10, pointPaint); // remember: We are plotting in the Widget, not the actual radar
+            Log.d("RadarView", "plotting: " + x + "," + y);
         }
     }
 
@@ -70,8 +73,8 @@ public class RadarView extends ImageView {
      */
     public void plotXY(float x, float y) {
         PointF p = new PointF();
-        p.x = (float)((double)x * cmM);
-        p.y = (float)((double)y * cmM);
+        p.x = x;
+        p.y = y;
         pt.add(p);
         invalidate();
     }
@@ -85,7 +88,8 @@ public class RadarView extends ImageView {
         double theta = toRadians(deg);
         float x = (float) (distance  * cos(theta));
         float y = (float) (distance * sin(theta));
-        plotXY(x,y);
+        pt.add(new  PointF(x,y));
+        invalidate();
     }
 
     /**
@@ -97,13 +101,11 @@ public class RadarView extends ImageView {
             float angle = (float) toRadians(deg);
             String s = "Rotating from (" + p.x + "," + p.y + ") to (";
             p.x = (float) (p.x * cos(angle) - p.y * sin(angle));
-
             p.y = (float) (p.x * sin(angle) + p.y * cos(angle));
             s += "(" + p.x + "," + p.y + ")";
             Log.d("rotate", s);
             invalidate();
         }
-
         invalidate();
     }
 
