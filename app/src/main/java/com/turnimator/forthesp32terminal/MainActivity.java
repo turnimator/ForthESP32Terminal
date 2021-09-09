@@ -27,6 +27,7 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     String[] autoFillHints;
+    ForthCommunicationModel forth = new ForthCommunicationModel();
     EditText textURI;
     EditText textPort;
     LinearLayout mainLayout;
@@ -61,7 +62,7 @@ public class MainActivity extends Activity {
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, wordList);
         wordListView.setAdapter(adapter);
         wordListView.setFocusable(true);
-        autoFillHints = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), "words");
+        forth.send("words");
         for (int i = 0; i < autoFillHints.length; i++) {
             String[] sa = autoFillHints[i].split(" ");
             for (int j = 0; j < sa.length; j++) {
@@ -151,12 +152,19 @@ public class MainActivity extends Activity {
 
         this.addContentView(mainLayout, verticalParams);
 
+        textPort.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
+                forth.connect(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()));
+                return true;
+            }
+        });
         commandTask = new Thread(new Runnable() {
 
             public synchronized void doCommand() {
                 if (commandQ.isEmpty()) {
                     try {
-                        Thread.sleep(200);
+                        wait(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -164,13 +172,7 @@ public class MainActivity extends Activity {
                 }
                 String cmd = commandQ.removeLast();
                 Log.d("Sending", cmd);
-                String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), cmd);
-                for (int i = 0; i < sa.length; i++) {
-                    responseQ.addFirst(sa[i]);
-                }
-                synchronized (responseTask) {
-                    responseTask.notify();
-                }
+                forth.send(cmd);
             }
 
             @Override
@@ -186,15 +188,10 @@ public class MainActivity extends Activity {
         responseTask = new Thread(new Runnable() {
             public synchronized void doResponse() {
                 for (; ; ) {
-                    if (responseQ.isEmpty()) {
-                        try {
-                            wait(1000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        return;
+                    String s = forth.receive();
+                    if (s == null){
+                        continue;
                     }
-                    String s = responseQ.removeLast();
                     if (s.startsWith("@")) {
                         parseResponse(s);
                     }
@@ -237,7 +234,7 @@ public class MainActivity extends Activity {
         });
 
         responseView.setText("");
-        getWords(commandField);
+
     }
 
 
@@ -273,10 +270,7 @@ public class MainActivity extends Activity {
                 @Override
                 public void onClick(View v) {
                     responseView.append(buttonCommandList.get(bci));
-                    String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), buttonCommandList.get(bci));
-                    for (int i = 0; i < sa.length; i++) {
-                        responseView.append(sa[i] + "\n");
-                    }
+                    forth.send(buttonCommandList.get(bci));
                 }
             });
             buttonLayout.addView(buttonList.get(bi));
@@ -385,10 +379,7 @@ public class MainActivity extends Activity {
                         @Override
                         public void onClick(View v) {
                             responseView.append(buttonCommandList.get(bci));
-                            String[] sa = ForthCommunicationModel.send(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()), buttonCommandList.get(bci));
-                            for (int i = 0; i < sa.length; i++) {
-                                responseView.append(sa[i] + "\n");
-                            }
+                            forth.send(buttonCommandList.get(bci));
                         }
                     });
                     buttonLayout.addView(buttonList.get(bi));
