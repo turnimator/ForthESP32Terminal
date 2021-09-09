@@ -25,9 +25,9 @@ public class RadarView extends ImageView {
     int h = 600;
     int wMid = w / 2;
     int hMid = h / 2;
-    int radius = hMid;
+    double radius = hMid;
     int radiusInCm = 40;
-    int cmM = radius / radiusInCm;
+    double cmM = ((double)radius / (double)radiusInCm) ;
     ArrayList<PointF> pt = new ArrayList<PointF>();
 
     public static float pxFromDp(final Context context, final float dp) {
@@ -70,8 +70,8 @@ public class RadarView extends ImageView {
      */
     public void plotXY(float x, float y) {
         PointF p = new PointF();
-        p.x = x * cmM;
-        p.y = y * cmM;
+        p.x = (float)((double)x * cmM);
+        p.y = (float)((double)y * cmM);
         pt.add(p);
         invalidate();
     }
@@ -97,15 +97,33 @@ public class RadarView extends ImageView {
             float angle = (float) toRadians(deg);
             String s = "Rotating from (" + p.x + "," + p.y + ") to (";
             p.x = (float) (p.x * cos(angle) - p.y * sin(angle));
+
             p.y = (float) (p.x * sin(angle) + p.y * cos(angle));
             s += "(" + p.x + "," + p.y + ")";
             Log.d("rotate", s);
             invalidate();
         }
+
         invalidate();
     }
 
-    public void translate(int direction, int distance){
-
+    /**
+     *
+     * @param deg angle in degrees
+     * @param distance distance in cm
+     */
+    public void translate(double deg, float distance){
+        double angle = toRadians(deg);
+        float x = (float) (distance  * cos(angle));
+        float y = (float) (distance * sin(angle));
+        for (PointF p:pt){
+            String s = "Translating from (" + p.x + "," + p.y + ") to (";
+            p.x += x;
+            p.y += y;
+            s += "(" + p.x + "," + p.y + ")";
+            Log.d("translate", s);
+            invalidate();
+        }
+        invalidate();
     }
 }
