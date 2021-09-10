@@ -92,6 +92,9 @@ public class MainActivity extends Activity {
     }
 
     void connect(){
+        if (forth.isConnected()){
+            forth.disconnect();
+        }
         forth.connect(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()));
     }
 
@@ -141,6 +144,9 @@ public class MainActivity extends Activity {
         textPort = new EditText(this);
         textPort.setText("23");
         connectionLayout.addView(textPort);
+        buttonConnect = new ToggleButton(this);
+        buttonConnect.setText("Connect");
+        connectionLayout.addView(buttonConnect);
 
         commandField = new CustomAutoCompleteTextView(this);
         leftSideListLayout.addView(commandField);
@@ -162,6 +168,13 @@ public class MainActivity extends Activity {
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
                connect();
                 return true;
+            }
+        });
+
+        buttonConnect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                connect();
             }
         });
 
@@ -262,10 +275,12 @@ public class MainActivity extends Activity {
             responseView.invalidate();
             return true;
         }
+
         if (param.toLowerCase(Locale.ROOT).equals("\\@words") || s[0].toLowerCase(Locale.ROOT).equals("\\@clr")) {
             getWords(commandField);
             return true;
         }
+
         if (s[0].toLowerCase(Locale.ROOT).equals("\\@button")) {
             rv = true;
             String text = s[1];
@@ -292,6 +307,7 @@ public class MainActivity extends Activity {
             buttonLayout.addView(buttonList.get(bi));
             return true;
         }
+
         if (s[0].toLowerCase(Locale.ROOT).equals("\\@plot")) {
             float deg = 0;
             float dist = 0;
@@ -307,7 +323,7 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        if (s[0].toLowerCase(Locale.ROOT).equals("\\@translate")) {
+        if (s[0].toLowerCase(Locale.ROOT).equals("\\@m")) {
             double deg = 0.0;
             float dist = 0.0F;
             try {
@@ -329,8 +345,7 @@ public class MainActivity extends Activity {
             return true;
         }
 
-
-        if (s[0].toLowerCase(Locale.ROOT).equals("\\@rot")) {
+        if (s[0].toLowerCase(Locale.ROOT).equals("\\@h")) {
             double angle = 0;
             try {
                 angle = Float.parseFloat(s[1]);
@@ -338,7 +353,7 @@ public class MainActivity extends Activity {
                 responseView.append(ex.toString());
                 return true;
             }
-            radarView.rotate(angle);
+            radarView.setHeading(angle);
 
             return true;
         }
@@ -383,8 +398,7 @@ public class MainActivity extends Activity {
             return true;
         }
 
-
-        if (s[0].toLowerCase(Locale.ROOT).equals("@translate")) {
+        if (s[0].toLowerCase(Locale.ROOT).equals("@m")) {
             double deg = 0.0;
             float dist = 0.0F;
             try {
@@ -406,12 +420,12 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        if (s[0].toLowerCase(Locale.ROOT).equals("@rotate")) {
+        if (s[0].toLowerCase(Locale.ROOT).equals("@h")) {
             float deg = Float.parseFloat(s[1]);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    radarView.rotate(deg);
+                    radarView.setHeading(deg);
                 }
             });
 
