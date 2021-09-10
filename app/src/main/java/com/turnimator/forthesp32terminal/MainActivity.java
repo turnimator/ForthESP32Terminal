@@ -306,6 +306,30 @@ public class MainActivity extends Activity {
 
             return true;
         }
+
+        if (s[0].toLowerCase(Locale.ROOT).equals("\\@translate")) {
+            double deg = 0.0;
+            float dist = 0.0F;
+            try {
+                deg = Float.parseFloat(s[1]);
+                dist = Float.parseFloat(s[2]);
+            } catch (Exception ex) {
+                Log.d("parseResponse", ex.toString());
+            }
+            Log.d("ParseResponse", "translate(" + deg + ", " + dist + ")");
+            double finalDeg = deg;
+            float finalDist = dist;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    radarView.translate(finalDeg, finalDist);
+                }
+            });
+
+            return true;
+        }
+
+
         if (s[0].toLowerCase(Locale.ROOT).equals("\\@rot")) {
             double angle = 0;
             try {
