@@ -4,6 +4,7 @@ import static java.lang.Math.atan2;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
+import static java.lang.Math.toDegrees;
 import static java.lang.Math.toRadians;
 
 import android.content.Context;
@@ -159,24 +160,23 @@ public class RadarView extends ImageView {
     /**
      * NB! All points are stored in degrees, cm
      * @param deg angle in degrees
-     * @param distance distance in cm
+     * @param d d in cm
      */
-    public void translate(double deg, double distance){
-        double angle = toRadians(deg);
-        double dx = distance * cos(angle);
-        double dy = distance * sin(angle);
-        for (Polar p:pt){
-            angle = toRadians(p.a);
-            double xcm = p.r  * cos(angle);
-            double ycm = p.r * sin(angle);
-            xcm += dx;
-            ycm += dy;
-            String s = "Translating from (" + xcm + "," + ycm + ") to (";
-            p.r = sqrt(xcm*xcm + ycm*ycm);
-            p.a += atan2(ycm, xcm);
+    public void translate(double deg, double d){
+        double dxAngle = toRadians(deg);
+        double dX = d * cos(dxAngle); // This angle is relative to origin
+        double dY = d * sin(dxAngle); // it should be relative to the point
+        // Now point is relative to 0,0!
 
-            s+= ""+xcm+","+ycm+")";
-            Log.d("translate", s);
+        for (Polar p:pt){
+            double angle = toRadians(p.a);
+            double pX = p.r  * cos(angle);
+            double pY = p.r * sin(angle); // Converted to cartesian
+            double newX = pX + dX;
+            double newY = pY + dY;
+            p.r = sqrt(newX*newX + newY*newY);
+            p.a += toDegrees(atan2(newY, newX));
+
             invalidate();
         }
         invalidate();
