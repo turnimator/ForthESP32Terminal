@@ -175,7 +175,7 @@ public class RadarView extends ImageView {
             double newX = pX + dX;
             double newY = pY + dY;
             p.r = sqrt(newX*newX + newY*newY);
-            p.a += toDegrees(atan2(newY, newX));
+            p.a = toDegrees(atan2(newY, newX));
 
             invalidate();
         }
