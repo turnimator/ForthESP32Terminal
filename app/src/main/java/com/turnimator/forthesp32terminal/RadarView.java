@@ -47,10 +47,24 @@ public class RadarView extends ImageView {
 
     ArrayList<Polar> pt = new ArrayList<>();
 
+    /**
+     * set the radar range in cm
+     * @param cm
+     */
+    void setRange(double cm){
+        radiusInCm = cm;
+        cmM = radius / cm;
+        invalidate();
+    }
+
     public static float pxFromDp(final Context context, final float dp) {
         return dp * context.getResources().getDisplayMetrics().density;
     }
 
+    /**
+     * Set the heading
+     * @param angle Angle in degrees
+     */
     public void setHeading(double angle){
         heading = angle;
         invalidate();
@@ -60,6 +74,10 @@ public class RadarView extends ImageView {
         invalidate();
     }
 
+    /**
+     * Constructor
+     * @param context
+     */
     public RadarView(Context context) {
         super(context);
         oval.left = (float) (w - radius);
