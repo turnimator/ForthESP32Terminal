@@ -52,15 +52,12 @@ public class RadarView extends ImageView {
     }
 
     public void setHeading(double angle){
+        heading = angle;
+        invalidate();
         for (Polar p: pt){
             p.a += angle;
         }
-        heading = angle;
         invalidate();
-    }
-
-    public void move(double direction, double distance){
-
     }
 
     public RadarView(Context context) {
@@ -120,7 +117,6 @@ public class RadarView extends ImageView {
         canvas.drawCircle(sX(heading, 2), sY(heading, 2), 10, compassPaint);
 
         for (Polar p : pt) {
-  //          canvas.drawCircle(cX + y, cY - x, 10, pointPaint); // remember: We are plotting in the Widget, not the actual radar
             canvas.drawCircle(sX(p.a, p.r), sY(p.a, p.r), 10, pointPaint); // remember: We are plotting in the Widget, not the actual radar
         }
     }
@@ -151,9 +147,17 @@ public class RadarView extends ImageView {
     void rotate(double deg){
         for (Polar p:pt){
             p.a += deg;
-            Log.d("rotate", ":" + deg);
-            invalidate();
+
         }
+        invalidate();
+    }
+
+    /**
+     * Move forward by
+     * @param cm distance in cm
+     */
+    public void forward(double cm){
+        translate(180 + heading, cm);
         invalidate();
     }
 

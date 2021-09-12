@@ -308,7 +308,7 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        if (s[0].toLowerCase(Locale.ROOT).equals("\\@plot")) {
+        if (s[0].toLowerCase(Locale.ROOT).equals("\\@p")) {
             float deg = 0;
             float dist = 0;
             try {
@@ -341,7 +341,6 @@ public class MainActivity extends Activity {
                     radarView.translate(finalDeg, finalDist);
                 }
             });
-
             return true;
         }
 
@@ -354,6 +353,19 @@ public class MainActivity extends Activity {
                 return true;
             }
             radarView.setHeading(angle);
+
+            return true;
+        }
+
+        if (s[0].toLowerCase(Locale.ROOT).equals("\\@f")) {
+            double cm = 0;
+            try {
+                cm = Float.parseFloat(s[1]);
+            } catch (Exception ex) {
+                responseView.append(ex.toString());
+                return true;
+            }
+            radarView.forward(cm);
 
             return true;
         }
@@ -376,7 +388,20 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        if (s[0].toLowerCase(Locale.ROOT).equals("@plot")) {
+        if (s[0].toLowerCase(Locale.ROOT).equals("@f")) {
+            double cm = 0;
+            try {
+                cm = Float.parseFloat(s[1]);
+            } catch (Exception ex) {
+                responseView.append(ex.toString());
+                return true;
+            }
+            radarView.forward(cm);
+
+            return true;
+        }
+
+        if (s[0].toLowerCase(Locale.ROOT).equals("@p")) {
             double deg = 0.0;
             float dist = 0.0F;
             try {
