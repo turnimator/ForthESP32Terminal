@@ -20,40 +20,35 @@ public class ForthCommunicationModel {
 
     Thread connectThread, sendThread, receiveThread;
 
-
     public void connect(String h, int p) {
         host = h;
         port = p;
-        connectThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    socket.connect(new InetSocketAddress(host, port));
-                } catch (Exception e) {
-                    Log.d("Connection", e.toString());
-                    return;
-                }
-                OutputStream os = null;
-                try {
-                    os = socket.getOutputStream();
-                } catch (Exception e) {
-                    Log.d("Connection stream", e.toString());
-                    return;
-                }
-                out = new PrintWriter(os);
 
-                InputStreamReader ir = null;
-                try {
-                    ir = new InputStreamReader(socket.getInputStream());
-                } catch (Exception e) {
-                    Log.d("Connection inputStream", e.toString());
-                    return;
-                }
-                br = new BufferedReader(ir);
-            }
-        });
-        connectThread.start();
+        try {
+            socket.connect(new InetSocketAddress(host, port));
+        } catch (Exception e) {
+            Log.d("Connection", e.toString());
+            return;
+        }
+        OutputStream os = null;
+        try {
+            os = socket.getOutputStream();
+        } catch (Exception e) {
+            Log.d("Connection stream", e.toString());
+            return;
+        }
+        out = new PrintWriter(os);
+
+        InputStreamReader ir = null;
+        try {
+            ir = new InputStreamReader(socket.getInputStream());
+        } catch (Exception e) {
+            Log.d("Connection inputStream", e.toString());
+            return;
+        }
+        br = new BufferedReader(ir);
     }
+
 
     public void send(String text) {
         final String[] s = {""};
@@ -78,8 +73,8 @@ public class ForthCommunicationModel {
 
 
     public boolean isConnected() {
-        if (br == null){
-            return  false;
+        if (br == null) {
+            return false;
         }
         return socket.isConnected();
     }
