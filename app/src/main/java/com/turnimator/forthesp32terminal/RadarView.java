@@ -40,7 +40,7 @@ public class RadarView extends ImageView {
     int cX = w / 2;
     int cY = h / 2;
     double radius = cY;
-    int radiusInCm = 40;
+    double radiusInCm = 40;
     double cmM = ((double)radius / (double)radiusInCm) ;
 
     RectF oval = new RectF();
