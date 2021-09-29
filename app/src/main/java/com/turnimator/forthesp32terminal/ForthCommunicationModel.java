@@ -23,7 +23,13 @@ public class ForthCommunicationModel {
     public void connect(String h, int p) {
         host = h;
         port = p;
-
+        if (socket.isConnected()) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         try {
             socket.connect(new InetSocketAddress(host, port));
         } catch (Exception e) {

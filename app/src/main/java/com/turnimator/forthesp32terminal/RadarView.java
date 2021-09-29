@@ -40,12 +40,13 @@ public class RadarView extends ImageView {
     int cX = w / 2;
     int cY = h / 2;
     double radius = cY;
-    double radiusInCm = 40;
+    double radiusInCm = 400;
     double cmM = ((double)radius / (double)radiusInCm) ;
 
     RectF oval = new RectF();
 
     ArrayList<Polar> pt = new ArrayList<>();
+
 
     /**
      * set the radar range in cm
@@ -135,6 +136,9 @@ public class RadarView extends ImageView {
         canvas.drawCircle(sX(heading, 2), sY(heading, 2), 10, compassPaint);
 
         for (Polar p : pt) {
+            if (p.r > 8000 || p.r <= 0){
+               continue; // Only plot sensible points
+            }
             canvas.drawCircle(sX(p.a, p.r), sY(p.a, p.r), 10, pointPaint); // remember: We are plotting in the Widget, not the actual radar
         }
     }
@@ -154,6 +158,18 @@ public class RadarView extends ImageView {
      * @param distance Distance in cm
      */
     public void plotPolar(double deg, double distance) {
+        /*
+        Reuse point entries
+         */
+        for (Polar p : pt){
+            if (p.a == deg){
+                p.r = distance;
+                return;
+            }
+        }
+        /*
+        If none is found, add one
+         */
         pt.add(new  Polar(deg, distance));
         invalidate();
     }

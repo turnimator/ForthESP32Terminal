@@ -1,6 +1,7 @@
 package com.turnimator.forthesp32terminal;
 
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -58,7 +59,7 @@ public class MainActivity extends Activity {
     //  ArrayDeque<String> responseQ = new ArrayDeque<>();
     Thread responseTask;
 
-    void getWords(CustomAutoCompleteTextView commandField) {
+    void getWords() {
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, wordList);
         wordListView.setAdapter(adapter);
@@ -77,7 +78,7 @@ public class MainActivity extends Activity {
             }
         }
         commandField.setAdapter(adapter);
-        commandField.setHint("1 1 + .");
+        commandField.setHint("");
         wordListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
@@ -92,10 +93,19 @@ public class MainActivity extends Activity {
     }
 
     void connect(){
-        if (forth.isConnected()){
-            forth.disconnect();
+    Thread connectThread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+            forth.connect(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()));
         }
-        forth.connect(textURI.getText().toString(), Integer.parseInt(textPort.getText().toString()));
+    });
+    connectThread.start();
+        try {
+            connectThread.join(500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @SuppressLint("NewApi")
@@ -221,6 +231,7 @@ public class MainActivity extends Activity {
                             Thread.sleep(200);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
+                            forth.disconnect();
                         }
                         continue;
                     }
@@ -277,7 +288,7 @@ public class MainActivity extends Activity {
         }
 
         if (param.toLowerCase(Locale.ROOT).equals("\\@words") || s[0].toLowerCase(Locale.ROOT).equals("\\@clr")) {
-            getWords(commandField);
+            getWords();
             return true;
         }
 
